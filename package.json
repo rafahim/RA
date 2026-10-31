@@ -1,0 +1,9 @@
+{
+  "name": "ra-fahim-identity",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture:projects": "node scripts/capture-projects.mjs"
+  }
+}
