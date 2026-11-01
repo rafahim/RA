@@ -2,7 +2,7 @@ name: Deploy static website to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -24,17 +24,33 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Assemble publish directory
+      - name: Assemble and validate publish directory
         shell: bash
         run: |
           set -euo pipefail
+          test -f index.html
+          test -d assets
+          test -s public/sitemap.xml
+          test -s public/robots.txt
           mkdir -p dist/assets
           cp index.html dist/index.html
           cp -R assets/. dist/assets/
           cp -R public/. dist/
-          test -f dist/robots.txt
-          test -f dist/sitemap.xml
-          test -f dist/CNAME
+          test -s dist/index.html
+          test -s dist/sitemap.xml
+          test -s dist/robots.txt
+          test -s dist/site.webmanifest
+          python - <<'PYXML'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          sitemap = Path('dist/sitemap.xml')
+          root = ET.parse(sitemap).getroot()
+          ns = {'sm': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+          urls = [node.text.strip() for node in root.findall('sm:url/sm:loc', ns) if node.text]
+          assert urls, 'No <loc> entries found in sitemap.xml'
+          print('Validated sitemap URLs:', ', '.join(urls))
+          print('Published root files:', ', '.join(p.name for p in Path('dist').iterdir()))
+          PYXML
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
